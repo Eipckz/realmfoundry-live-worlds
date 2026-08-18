@@ -1,16 +1,23 @@
 # Asset Manifest
 
-All RealmFoundry-specific visual assets are original and generated for this project. Blender source remains authoritative outside Unreal `Content`; standard Unreal Engine Third Person template content supplies the inherited movement/controller foundation.
+All RealmFoundry-specific presentation assets are original and were authored procedurally in Blender for this project. The `.blend` sources remain authoritative outside Unreal `Content`.
 
-| ID | Blender source | Exchange | Preview | Unreal destination | Validation | Status |
-|---|---|---|---|---|---|---|
-| ML-001 | `ExternalAssets/MasterLibrary/RF_MasterLibrary.blend` | `RF_StaticLibrary.glb`, `RF_StaticLibrary.fbx` | `RF_MasterLibrary_Preview.png` | `/Game/Environment/RealmFoundryKit` | 56 stable named meshes; 17 key meshes with generated convex collision | verified |
-| CH-001 | `ExternalAssets/MasterLibrary/RF_MasterLibrary.blend` | `SK_RFSubscriber.fbx` | master preview | `/Game/Characters/Subscriber` | 18-bone single-root rig, weighted mesh, physics asset | verified |
-| AN-001 | subscriber actions in master `.blend` | `SK_RFSubscriber.fbx` | live world representatives | `/Game/Characters/Subscriber` | 15 isolated in-place clips: Idle, Walk, Run, Talk, Cheer, Melee, Ranged, Cast, Hit, Death, Ghost, Sit, Type, Repair, Inspect | verified |
-| ENV-001 | master `.blend` | static GLB/FBX | master preview | `/Game/Environment/RealmFoundryKit` | 12 functional buildings and service props | verified |
-| ENV-002 | master `.blend` | static GLB/FBX | master preview | `/Game/Environment/RealmFoundryKit` | 18 infrastructure/modular/dungeon construction pieces | verified |
-| CR-001 | master `.blend` | static GLB/FBX | master preview | `/Game/Environment/RealmFoundryKit` | slime, golem, eldritch multi-phase boss | verified |
-| IT-001 | master `.blend` | static GLB/FBX | master preview | `/Game/Environment/RealmFoundryKit` | 15 weapon-category display models | verified |
-| PROP-001 | master `.blend` | static GLB/FBX | master preview | `/Game/Environment/RealmFoundryKit` | chest, key, potion, trinket, respawn stone, operator drone | verified |
+## Corrected v0.3.0 presentation set
 
-Generation is deterministic and rerunnable through `ExternalAssets/Scripts/generate_realmfoundry_assets.py`. Blender validation completed with zero reported topology, rig, animation, material, or export errors.
+| ID | Blender source | Exchange asset | Unreal destination | Validation | Status |
+|---|---|---|---|---|---|
+| TD-001 | `ExternalAssets/DioramaV2/RF_DioramaV2.blend` | `RF_TownDiorama_V2.fbx` | `/Game/Environment/DioramaV2/SM_RF_TownDioramaV2` | 523 authored objects, 22 materials, rendered 1920x1080 preview | verified |
+| BLD-001 | same source | `RF_Building_Inn_V2.fbx` | `SM_RF_InnV2`, `BP_RFBuildable_InnV2` | origin-centered runtime building | verified |
+| BLD-002 | same source | `RF_Building_Smithy_V2.fbx` | `SM_RF_SmithyV2`, `BP_RFBuildable_SmithyV2` | origin-centered runtime building | verified |
+| BLD-003 | same source | `RF_Building_Uplink_V2.fbx` | `SM_RF_UplinkV2`, `BP_RFBuildable_UplinkV2` | origin-centered runtime building | verified |
+| BLD-004 | same source | `RF_Building_GuildHall_V2.fbx` | `SM_RF_GuildHallV2`, `BP_RFBuildable_GuildHallV2` | origin-centered runtime building | verified |
+| BLD-005 | same source | `RF_Building_DungeonGate_V2.fbx` | `SM_RF_DungeonGateV2`, `BP_RFBuildable_DungeonGateV2` | origin-centered runtime building | verified |
+| BLD-006 | same source | `RF_Building_TravelDock_V2.fbx` | `SM_RF_TravelDockV2`, `BP_RFBuildable_TravelDockV2` | origin-centered runtime building | verified |
+
+Preview: `ExternalAssets/DioramaV2/RF_DioramaV2_Preview.png`.
+
+Generation is deterministic through `ExternalAssets/Scripts/generate_realmfoundry_diorama_v2.py`; modular exports are produced by `ExternalAssets/Scripts/export_realmfoundry_buildings_v2.py`.
+
+## Supplementary legacy simulation library
+
+`ExternalAssets/MasterLibrary/RF_MasterLibrary.blend` remains available for the broader simulation layer. It contains 56 named meshes, a weighted 18-bone subscriber rig with 15 isolated animation clips, service props, dungeon pieces, creatures, and 15 weapon-category representatives. These assets support design coverage but are not used as the corrected release's main town presentation.

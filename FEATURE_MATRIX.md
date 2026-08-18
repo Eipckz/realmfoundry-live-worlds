@@ -6,8 +6,8 @@ Status values: `verified-slice`, `implemented-sim`, `represented-data`, `deferre
 |---|---|---|---|
 | MMO definition/business model/setup/seed | verified-slice | `BP_RFSimulationManager`, economy data | Loan start, name, paid + subscription + F2P flags and seed state |
 | Regions/terrain/settlements/districts/water | implemented-sim | `BP_RFWorldDirector` | Two regions, six districts, flat/lake/waterway/weather state advances live |
-| Advanced construction/brush/groups/undo | implemented-sim | `BP_RFWorldDirector` | Brush/group/duplication state and 20-action undo depth |
-| Functional buildings/services | verified-slice | World set + economy data | Inn, tavern, shops, market, graveyard, quest hall, portal, dungeon, travel |
+| Advanced construction/brush/groups/undo | verified-slice | `BP_RFStrategyCameraPawn`, world director | Cursor placement, 250 cm grid snap, six selectable categories; brush/group/undo depth represented in simulation state |
+| Functional buildings/services | verified-slice | Six `BP_RFBuildable_*V2` assets + economy data | Placeable inn, smithy, uplink, guild hall, dungeon gate, and travel dock with service/economy effects |
 | Network/server infrastructure | verified-slice | Simulation + world directors | Uplink objective reaches 100 coverage and 250 capacity |
 | Player class design | represented-data | `BP_RFCombatDirector` | Five role classes, resources, category permissions, ability parameters |
 | Monster/NPC design and zones | verified-slice | Combat director + world set | Slime, golem, elite/boss, quest representative, painted-zone state |
@@ -20,7 +20,7 @@ Status values: `verified-slice`, `implemented-sim`, `represented-data`, `deferre
 | Individual subscriber simulation | verified-slice | `BP_RFSubscriberDirector` | Profiles, schedules, budgets, bank, spending, activity, addiction, cheating |
 | Monetization/economy | verified-slice | `BP_RFEconomyDirector` | Loan, service/route pricing, daily income, budgets, cashflow and graphs data |
 | Development/technology/bugs | implemented-sim | `BP_RFLiveOpsDirector` | Developers, research, repair, severity queues, policies, debugging/anti-cheat |
-| Updates/maintenance/live service | verified-slice | Simulation + live-ops directors | Changelog, named releases, hype, shutdown/maintenance data; playable `0.2` gate |
+| Updates/maintenance/live service | verified-slice | Strategy pawn + live-ops directors | Six-item changelog gate, major-update action, hype/subscriber/cash reward, day advance; maintenance data |
 | Advertising/reception/competition/awards | implemented-sim | `BP_RFLiveOpsDirector` | Impressions, rating, streamer influence, campaigns, awards state |
 | Moderation/cheating/Game Masters | implemented-sim | Subscriber + live-ops directors | Reports, suspicion, evidence, warning/ban policies, anti-cheat research |
 | Art packs/themes | represented-data | Original master asset library | Feudal/fantasy base plus ruins, pulp sci-fi, confection, eldritch palette data |

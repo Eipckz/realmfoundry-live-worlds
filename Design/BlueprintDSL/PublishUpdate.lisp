@@ -1,0 +1,10 @@
+(fn PublishUpdate ()
+  (if (and (>= (Variables|Default|GetBuildCount) 6) (not (Variables|Default|GetReleaseComplete)))
+    (Variables|Default|SetReleaseComplete true)
+    (Variables|Default|SetCash (+ (Variables|Default|GetCash) 15000.0))
+    (Variables|Default|SetSubscribers (+ (Variables|Default|GetSubscribers) 4000))
+    (Variables|Default|SetHype (+ (Variables|Default|GetHype) 25.0))
+    (Variables|Default|SetCurrentDay (+ (Variables|Default|GetCurrentDay) 30))
+    (Development|PrintString "MAJOR UPDATE RELEASED // REALMFOUNDRY LIVE // YOU WIN" true true "(R=0.250000,G=1.000000,B=0.520000,A=1.000000)" 15.0)
+    (else
+      (Development|PrintString "RELEASE LOCKED // BUILD 6 SERVICES FIRST" true true "(R=1.000000,G=0.360000,B=0.160000,A=1.000000)" 5.0))))

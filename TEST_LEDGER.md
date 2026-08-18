@@ -2,6 +2,24 @@
 
 Final corrected verification date: August 18, 2026. Engine: Unreal Engine 5.8.1. DCC: Blender 5.2.
 
+## Active release expansion gates
+
+These tests describe the current expanded source. The `v0.3.0` package evidence below remains historical and must not be used as proof for the next executable.
+
+| Gate | Evidence | Result |
+|---|---|---|
+| Visible population | PIE spawned 36 animated representatives for 10,000 logical subscribers; sampled actors moved 377–490 cm over 1.5 seconds | pass |
+| Live management HUD | Slate screenshot shows live treasury, subscriber, technology, economy, capacity/load, research, selection, and six-button action bar | pass |
+| Timed technology | `T` changed cash `$28,000 -> $23,000` and tier `0 -> 1` only after research duration elapsed | pass |
+| Technology rejection | Tier-2 Smithy selected at tier 1; placement left cash `$23,000` and build count `0`, with technology rejection notification | pass |
+| Disk save/load | Saved tier 1 / `$23,000`, advanced to tier 2 / `$14,500`, loaded back to tier 1 / `$23,000` | pass |
+| Daily economy | Price `12.99 -> 13.49`; day close recalculated revenue, expenses, profit, capacity/load, active players, happiness, cash, and subscribers | pass |
+| Runtime errors | Latest validated PIE economy session had no Blueprint runtime error, `Accessed None`, ensure failure, or fatal error | pass |
+| Current packaged executable | `v0.4.0` Shipping build launched at 1920x1080, displayed all HUD controls, accepted a real Inn placement, wrote a save, and exited normally | pass |
+| Visible staff | PIE exposed two named developers and two named game masters with role-specific activity labels and deterministic staff flags | pass |
+| Construction history | Place -> undo -> redo preserved type/transform state and exactly one active-world Inn; load cleared transient redo state | pass |
+| Mouse utility controls | Packaged/PIE controls cover price, rotation, undo, redo, save, and load in addition to build/operations rows | pass |
+
 ## Art and import gates
 
 | Gate | Evidence | Result |
@@ -34,6 +52,19 @@ Final corrected verification date: August 18, 2026. Engine: Unreal Engine 5.8.1.
 | Public ZIP structure | archive listing includes root `RealmFoundry.exe` plus PAK/UTOC/UCAS payload | pass |
 
 ## Published Windows artifact
+
+Current release:
+
+```text
+RealmFoundry-Living-Worlds-v0.4.0-Windows.zip
+Size: 415,760,639 bytes
+SHA256: 7D27EEC2C6B8BD2C2C68826539AB6AAB8681DA2E7A7B1285F0BB703958145FB0
+RealmFoundry.exe SHA256: 4027EE3A8CBD16234974736A708EA19D14E7355B7E5223A55965368B19339B57
+```
+
+The ZIP was inspected to confirm that `RealmFoundry.exe`, Engine runtime files, prerequisites, and the PAK/UCAS/UTOC payload are rooted correctly. The packaged executable created `RealmFoundry_Auto.sav` under the Windows AppData save directory and accepted a normal close request.
+
+Historical release:
 
 ```text
 RealmFoundry-Tycoon-v0.3.0-Windows.zip

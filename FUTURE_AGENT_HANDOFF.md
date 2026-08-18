@@ -1,30 +1,41 @@
 # Future Agent Handoff
 
-## Current state
+## Active release objective
 
-RealmFoundry is a concluded, playable Unreal Engine 5.8.1 Blueprint-only vertical slice. The source project lives at `D:\CodexGames\RealmFoundry\RealmFoundry.uproject`. The authoritative Blender generator is `ExternalAssets/Scripts/generate_realmfoundry_assets.py`; generated sources and exchange files are under `ExternalAssets/MasterLibrary`.
+RealmFoundry is under active expansion from the historical `v0.3.0` construction slice into a release-ready MMORPG management simulator. Do not describe the overall goal as complete until a newly packaged Windows executable has been launched outside Unreal, smoke-tested, pushed with the full source/content update, and attached to a GitHub Release.
 
-The Windows package was created successfully under `Packaged/Windows` but is ignored by Git. Rebuild it with the command in `README.md`.
+The source project is `D:\CodexGames\RealmFoundry\RealmFoundry.uproject`. Use Unreal Engine 5.8.1 and keep the runtime Blueprint-only unless a working C++ toolchain is independently confirmed.
 
-## Runtime architecture
+## Validated current systems
 
-- `/Game/Core/BP_RFSimulationManager`: six-zone onboarding/release loop and top-level KPIs.
-- `/Game/Core/Systems/BP_RFWorldDirector`: regions, districts, waterways, construction and obstruction state.
-- `/Game/Core/Systems/BP_RFSubscriberDirector`: individual customer, schedule, social, spending and behavior simulation.
-- `/Game/Core/Systems/BP_RFCombatDirector`: classes, weapon permissions, abilities, effects, roles and tactical decisions.
-- `/Game/Core/Systems/BP_RFDungeonDirector`: rooms, locks, loot, instances and phased boss simulation.
-- `/Game/Core/Systems/BP_RFEconomyDirector`: business models, prices, routes, budgets, revenue and loan state.
-- `/Game/Core/Systems/BP_RFLiveOpsDirector`: staff, research, bugs, maintenance, releases, marketing and moderation.
-- `/Game/Core/Save/BP_RFSaveDirector`: real five-second `SaveGameToSlot` persistence.
-- `/Game/UI/WBP_RFOperatorHUD`: operator-facing objective and KPI HUD.
-- `/Game/Maps/W_RealmFoundry`: complete authored showcase and playable acceptance path.
+- `/Game/Characters/Subscribers/BP_RFSubscriberSpawner` creates 36 visible representatives for 10,000 logical subscribers.
+- `/Game/Characters/Subscribers/BP_RFSubscriberRepresentative` runs animated world-space activity movement and owns a third-person follow camera.
+- `/Game/Data/Technology` contains eight real technology definition data assets with prerequisite, cost, duration, tier, build unlock, and feature fields.
+- `/Game/Core/Camera/BP_RFStrategyCameraPawn` enforces technology-tier build prerequisites, supports research, inspection/follow, daily economy simulation, pricing, and disk-backed save/load.
+- `/Game/UI/WBP_RFOperatorHUD` reports live treasury, subscribers, price, daily economy, capacity/load, research, build prerequisite, and selected-subscriber state. It also contains a six-button mouse action bar.
+- `F5` saves to `RealmFoundry_Auto`; `F9` restores the saved realm state.
 
-## Known boundaries
+## Reproducible evidence
 
-The project deliberately implements the requested catalog as a breadth-complete vertical slice: some editor-heavy systems are represented by live data and simulation instead of production-scale authoring UIs. The explicitly unreleased roadmap features remain out of scope: factions/unrestricted world PvP, world raids, disasters, Twitch, Workshop, full in-game Codex, additional creativity spikes, and version 1.0.
+- Research test: `$28,000 -> $23,000`, tier `0 -> 1` after timed completion.
+- Technology rejection: selecting the tier-2 Smithy at tier 1 left cash and build count unchanged and set the rejection notification.
+- Persistence test: saved tier 1 / `$23,000`, advanced to tier 2 / `$14,500`, then restored tier 1 / `$23,000` from disk.
+- Economy test: price `12.99 -> 13.49`; daily close advanced the day, recalculated revenue/expenses/profit/capacity/load, and grew subscribers.
+- Current-session PIE logs contained no Blueprint runtime error, `Accessed None`, ensure failure, or fatal error during the validated economy run.
+- Visual evidence is generated under ignored `Saved/Validation/`.
 
-The project includes Epic Third Person template content for the inherited movement/controller foundation. All RealmFoundry-specific meshes, weapons, monsters, buildings, dungeon pieces, subscriber rig/animations, and operator drone are original generated assets.
+## Authoring workflow
 
-## Verification
+- Use `Tools/Invoke-UnrealMcp.ps1` for Unreal MCP calls.
+- Reusable authoring scripts live under `Design/Programmatic/`.
+- Use the project skill at `.codex/skills/realmfoundry-feature-studio/` and read its Unreal MCP reference before structural Blueprint or UMG edits.
+- Stop PIE before structural edits, compile with warnings as errors, save all assets, and validate both a success and a rejected path.
 
-Read `TEST_LEDGER.md` before changing runtime logic. The final baseline passes Blueprint compilation, 9/9 automation smoke tests, map PIE, six-zone gameplay acceptance, editor and packaged autosave, BuildCookRun, and a 15-second archived-executable runtime audit.
+## Still required for the release goal
+
+- Persist placed-building classes and transforms, not only aggregate construction state.
+- Complete subscriber inspection data, social behavior, quests, combat, progression, inventory, and churn reasons as observable gameplay.
+- Replace director-only representations with playable building/service, infrastructure, dungeon, live-ops, moderation, campaign, and settings interactions.
+- Add construction obstruction/rotation/undo and fuller mouse-first management panels.
+- Run automation, performance, cook, packaging, and exact packaged-executable tests.
+- Update GitHub source/content and publish the verified Windows package through GitHub Releases.

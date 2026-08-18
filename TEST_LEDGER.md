@@ -2,6 +2,21 @@
 
 Final corrected verification date: August 18, 2026. Engine: Unreal Engine 5.8.1. DCC: Blender 5.2.
 
+## Active release expansion gates
+
+These tests describe the current expanded source. The `v0.3.0` package evidence below remains historical and must not be used as proof for the next executable.
+
+| Gate | Evidence | Result |
+|---|---|---|
+| Visible population | PIE spawned 36 animated representatives for 10,000 logical subscribers; sampled actors moved 377–490 cm over 1.5 seconds | pass |
+| Live management HUD | Slate screenshot shows live treasury, subscriber, technology, economy, capacity/load, research, selection, and six-button action bar | pass |
+| Timed technology | `T` changed cash `$28,000 -> $23,000` and tier `0 -> 1` only after research duration elapsed | pass |
+| Technology rejection | Tier-2 Smithy selected at tier 1; placement left cash `$23,000` and build count `0`, with technology rejection notification | pass |
+| Disk save/load | Saved tier 1 / `$23,000`, advanced to tier 2 / `$14,500`, loaded back to tier 1 / `$23,000` | pass |
+| Daily economy | Price `12.99 -> 13.49`; day close recalculated revenue, expenses, profit, capacity/load, active players, happiness, cash, and subscribers | pass |
+| Runtime errors | Latest validated PIE economy session had no Blueprint runtime error, `Accessed None`, ensure failure, or fatal error | pass |
+| Current packaged executable | Expanded source has not yet been cooked and packaged | pending |
+
 ## Art and import gates
 
 | Gate | Evidence | Result |

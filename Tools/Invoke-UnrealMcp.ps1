@@ -1,103 +1,121 @@
+[CmdletBinding(DefaultParameterSetName = 'List')]
 param(
-    [string]$ToolName,
+    [Parameter(ParameterSetName = 'Describe', Mandatory)]
+    [string]$DescribeToolset,
+
+    [Parameter(ParameterSetName = 'Call', Mandatory)]
+    [string]$Toolset,
+
+    [Parameter(ParameterSetName = 'Call', Mandatory)]
+    [string]$Tool,
+
+    [Parameter(ParameterSetName = 'Call')]
     [string]$ArgumentsJson = '{}',
-    [switch]$ListTools,
-    [string]$OutputImagePath,
-    [string]$ServerUrl = 'http://127.0.0.1:8000/mcp'
+
+    [Parameter(ParameterSetName = 'Batch', Mandatory)]
+    [string]$BatchJson,
+
+    [string]$Url = 'http://127.0.0.1:8000/mcp'
 )
 
 $ErrorActionPreference = 'Stop'
-$baseHeaders = @{
-    Accept = 'application/json, text/event-stream'
-    'Content-Type' = 'application/json'
-}
+$protocolVersion = '2025-11-25'
+$headers = @{ Accept = 'application/json, text/event-stream' }
 
-function Invoke-RFRequest {
+function Invoke-McpRequest {
     param(
-        [hashtable]$Payload,
-        [hashtable]$Headers
+        [Parameter(Mandatory)] [hashtable]$Body,
+        [string]$SessionId
     )
 
-    $body = $Payload | ConvertTo-Json -Depth 100 -Compress
-    $response = Invoke-WebRequest -Uri $ServerUrl -Method Post -Headers $Headers -Body $body
-    [pscustomobject]@{
-        Response = $response.Content | ConvertFrom-Json -Depth 100
-        Headers = $response.Headers
+    $requestHeaders = $headers.Clone()
+    if ($SessionId) {
+        $requestHeaders['Mcp-Session-Id'] = $SessionId
     }
+
+    Invoke-WebRequest `
+        -Uri $Url `
+        -Method Post `
+        -Headers $requestHeaders `
+        -ContentType 'application/json' `
+        -Body ($Body | ConvertTo-Json -Depth 100 -Compress) `
+        -UseBasicParsing
 }
 
-$initialize = Invoke-RFRequest -Headers $baseHeaders -Payload @{
+$initialize = Invoke-McpRequest -Body @{
     jsonrpc = '2.0'
     id = 1
     method = 'initialize'
     params = @{
-        protocolVersion = '2025-11-25'
+        protocolVersion = $protocolVersion
         capabilities = @{}
-        clientInfo = @{ name = 'RealmFoundry-Codex-Recovery'; version = '2.0' }
+        clientInfo = @{ name = 'realmfoundry-project-client'; version = '1.0' }
     }
 }
 
 $sessionId = [string]$initialize.Headers['Mcp-Session-Id']
-if ([string]::IsNullOrWhiteSpace($sessionId)) {
+if (-not $sessionId) {
     throw 'Unreal MCP initialize response did not include Mcp-Session-Id.'
 }
 
-$sessionHeaders = $baseHeaders.Clone()
-$sessionHeaders['Mcp-Session-Id'] = $sessionId
+$initializedJson = @{ jsonrpc = '2.0'; method = 'notifications/initialized'; params = @{} } |
+    ConvertTo-Json -Depth 10 -Compress
+& curl.exe -sS --max-time 2 -X POST $Url `
+    -H 'Content-Type: application/json' `
+    -H 'Accept: application/json, text/event-stream' `
+    -H "Mcp-Session-Id: $sessionId" `
+    --data $initializedJson | Out-Null
 
-$initializedBody = @{
-    jsonrpc = '2.0'
-    method = 'notifications/initialized'
-    params = @{}
-} | ConvertTo-Json -Depth 10 -Compress
-Invoke-WebRequest -Uri $ServerUrl -Method Post -Headers $sessionHeaders -Body $initializedBody | Out-Null
-
-if ($ListTools) {
-    $result = Invoke-RFRequest -Headers $sessionHeaders -Payload @{
-        jsonrpc = '2.0'
-        id = 2
-        method = 'tools/list'
-        params = @{}
+switch ($PSCmdlet.ParameterSetName) {
+    'Describe' {
+        $params = @{ name = 'describe_toolset'; arguments = @{ toolset_name = $DescribeToolset } }
     }
-    $result.Response | ConvertTo-Json -Depth 100
-    exit 0
+    'Call' {
+        $arguments = $ArgumentsJson | ConvertFrom-Json -AsHashtable
+        $params = @{
+            name = 'call_tool'
+            arguments = @{
+                toolset_name = $Toolset
+                tool_name = $Tool
+                arguments = $arguments
+            }
+        }
+    }
+    'Batch' {
+        $batch = @($BatchJson | ConvertFrom-Json -AsHashtable)
+        $responses = @()
+        $requestId = 2
+        foreach ($item in $batch) {
+            $batchParams = @{
+                name = 'call_tool'
+                arguments = @{
+                    toolset_name = [string]$item.toolset
+                    tool_name = [string]$item.tool
+                    arguments = if ($item.arguments) { $item.arguments } else { @{} }
+                }
+            }
+            $batchResponse = Invoke-McpRequest -SessionId $sessionId -Body @{
+                jsonrpc = '2.0'
+                id = $requestId
+                method = 'tools/call'
+                params = $batchParams
+            }
+            $responses += ($batchResponse.Content | ConvertFrom-Json -Depth 100)
+            $requestId++
+        }
+        $responses | ConvertTo-Json -Depth 100
+        return
+    }
+    default {
+        $params = @{ name = 'list_toolsets'; arguments = @{} }
+    }
 }
 
-if ([string]::IsNullOrWhiteSpace($ToolName)) {
-    throw 'Specify -ToolName or -ListTools.'
-}
-
-$arguments = $ArgumentsJson | ConvertFrom-Json -AsHashtable -Depth 100
-$call = Invoke-RFRequest -Headers $sessionHeaders -Payload @{
+$response = Invoke-McpRequest -SessionId $sessionId -Body @{
     jsonrpc = '2.0'
-    id = 3
+    id = 2
     method = 'tools/call'
-    params = @{
-        name = $ToolName
-        arguments = $arguments
-    }
+    params = $params
 }
 
-if (-not [string]::IsNullOrWhiteSpace($OutputImagePath)) {
-    $textBlock = $call.Response.result.content | Where-Object type -eq 'text' | Select-Object -First 1
-    if ($null -eq $textBlock) { throw 'Tool response did not contain a text payload with image data.' }
-    $payload = $textBlock.text | ConvertFrom-Json -Depth 100
-    $image = $payload.returnValue.image
-    if ($null -eq $image -and -not [string]::IsNullOrWhiteSpace([string]$payload.returnValue.data)) {
-        $image = $payload.returnValue
-    }
-    if ([string]::IsNullOrWhiteSpace([string]$image.data)) { throw 'Tool response did not contain returnValue.image.data.' }
-    $resolvedParent = Split-Path -Parent $OutputImagePath
-    if (-not (Test-Path -LiteralPath $resolvedParent)) { New-Item -ItemType Directory -Path $resolvedParent -Force | Out-Null }
-    [System.IO.File]::WriteAllBytes($OutputImagePath, [Convert]::FromBase64String([string]$image.data))
-    [pscustomobject]@{
-        output_image = $OutputImagePath
-        mime_type = $image.mimeType
-        camera_location = $payload.returnValue.cameraLocation
-        camera_rotation = $payload.returnValue.cameraRotation
-        camera_fov = $payload.returnValue.cameraFOV
-    } | ConvertTo-Json -Depth 20
-    exit 0
-}
-
-$call.Response | ConvertTo-Json -Depth 100
+$response.Content

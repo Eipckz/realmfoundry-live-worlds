@@ -1,0 +1,4 @@
+interface:
+  display_name: "RealmFoundry Feature Studio"
+  short_description: "Build and validate RealmFoundry gameplay slices"
+  default_prompt: "Use $realmfoundry-feature-studio to implement and validate the next RealmFoundry gameplay slice."

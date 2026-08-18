@@ -1,16 +1,16 @@
 # RealmFoundry: Live Worlds
 
-Contract revision: 1.0 — frozen vertical slice  
+Contract revision: 2.0 — top-down tycoon correction
 Target project: `D:\CodexGames\RealmFoundry\RealmFoundry.uproject`
 
 ## Product
 
 - One-sentence fantasy: Design, launch, monetize, and operate a living 3D MMORPG whose individually simulated customers visibly inhabit the world you build.
-- Player verbs: inspect, orbit, sculpt, buy, place, connect, price, configure, hire, research, design, publish, moderate, repair, pause, accelerate, and analyze.
+- Player verbs: pan, orbit, zoom, point, inspect, select, buy, preview, place, rotate, connect, price, configure, hire, research, design, publish, moderate, repair, pause, accelerate, and analyze.
 - Core loop: acquire a region → build a playable MMO destination → connect infrastructure → attract subscribers → satisfy needs and earn revenue → research features → ship named updates → expand while controlling bugs, congestion, cheating, and debt.
 - Session length: 30–90 minutes per campaign; unlimited sandbox continuation after victory.
 - Target platform and input: Windows 64-bit packaged build; keyboard/mouse primary and gamepad-compatible camera/UI navigation. Project content is platform-neutral for native macOS/Linux builds.
-- Camera and movement model: 3D strategy camera with pan, edge/keyboard movement, orbit, zoom, focus, and construction-mode raycasts.
+- Camera and movement model: elevated 3D isometric/top-down strategy camera with keyboard/edge pan, drag orbit, wheel zoom, focus, and cursor raycasts. There is no directly controlled walking avatar and no first- or third-person traversal mode.
 - Win state: reach MMO rating 4.5, 5,000 active subscribers, positive 30-day cash flow, and release a named Major Update without unresolved crash-level bugs.
 - Loss state: cash remains below the loan limit for 30 simulated days, or reputation reaches zero with no active subscribers. The player can restart or continue in recovery mode.
 
@@ -18,9 +18,9 @@ Target project: `D:\CodexGames\RealmFoundry\RealmFoundry.uproject`
 
 - Start state: loan-backed company setup creates a named MMO, logo seed, business model, target appeals, world seed, and first owned region.
 - Traversable space: one stylized 3D valley region with a buildable settlement, lake, bridge, road, server coverage, and a small dungeon entrance.
-- Objective: place an inn, quest NPC, uplink, monster zone, and paid travel stop; connect coverage; launch version 0.1; satisfy 25 simulated subscribers; publish version 0.2.
-- Required interaction: construction preview and placement, service pricing, quest generation, update changelog selection, and release while servers are offline.
-- Feedback/UI: build palette, placement validity, region/network overlays, subscriber bubbles, finance/appeal HUD, objective tracker, release dialog, pause/speed controls, and explicit failure reasons.
+- Objective: use the management interface to place an inn, quest hall, uplink, monster camp, and paid flight point; connect coverage; launch version 0.1; satisfy 25 simulated subscribers; publish version 0.2.
+- Required interaction: click a build-card or number hotkey, preview the selected construction on the terrain grid, confirm placement with the cursor, set its service price, and use the release controls while servers are offline. No objective advances by walking through a trigger.
+- Feedback/UI: left build palette with illustrated service cards and prices, green/red placement footprint, selected-building inspector, network overlay, subscriber bubbles, top finance/appeal bar, objective tracker, release panel, pause/speed controls, and explicit failure reasons.
 - End-state transition: a successful release celebration, rating/subscriber increase, and unlocked world-expansion screen; failure displays recovery actions.
 - Restart behavior: new campaign clears runtime systems and widgets, reloads seed/setup data, and creates one copy of every manager.
 
@@ -28,7 +28,7 @@ Target project: `D:\CodexGames\RealmFoundry\RealmFoundry.uproject`
 
 | ID | Type | Source | Required states/animations | Unreal destination | Acceptance check |
 |---|---|---|---|---|---|
-| CH-001 | Operator drone/cursor | Original Blender | idle hover, select pulse, invalid shake | `/Game/Characters/Operator` | Visible, animated, selects and places objects |
+| CH-001 | Strategy camera/cursor | Unreal Blueprint + original cursor marker | pan, orbit, zoom, focus, hover, valid/invalid placement | `/Game/Core/Camera` | Starts top-down, never exposes a walking avatar, selects and places objects |
 | CH-002 | Modular subscriber | Original Blender | idle, walk, run, talk, cheer, melee, ranged, cast, hit, death, ghost, sit | `/Game/Characters/Subscribers` | AI changes activity and animation without errors |
 | CH-003 | Developer/GM staff | Original Blender variants | idle, walk, type, repair, inspect, celebrate | `/Game/Characters/Staff` | Staff travel to work and complete tasks |
 | CR-001 | Monster family | Original Blender | idle, patrol, attack, hit, death, boss phase | `/Game/Characters/Monsters` | Zone spawn and tactical combat pass |
@@ -43,8 +43,9 @@ Target project: `D:\CodexGames\RealmFoundry\RealmFoundry.uproject`
 
 ## Art and technical direction
 
-- Shape language and palette: readable stylized diorama realism; chunky modular silhouettes, warm settlement lighting, cool network overlays, saturated service accents, and restrained UI panels.
-- Realism/stylization: stylized proportions with physically plausible materials and lighting; no copied commercial-game assets or logos.
+- Shape language and palette: premium storybook-diorama strategy art. Buildings use layered wall volumes, timber frames, stone foundations, deep eaves, dormers, chimneys, glowing windows, hanging service signs, gardens, fences, awnings, crates, barrels, and roof variation. Terrain uses sculpted grassy islands, cliffs, roads, water, bridges, rocks, flowers, and clustered foliage. Warm amber settlement light contrasts with teal network overlays and violet dungeon magic.
+- Realism/stylization: polished stylized proportions with hand-painted color variation, bevel-weighted edges, readable material separation, and physically plausible lighting. Every hero building must remain immediately identifiable at a 35–55 degree top-down camera angle and occupy at least 70 pixels at default 1080p framing. No copied commercial-game assets or logos.
+- Visual rejection bar: plain boxes with a single cone roof, unarticulated stick people, one-color props, empty white foundations, asset-showroom rows, and scenery without a composed playable landscape are prohibited final content.
 - Unreal units and Blender units: 1 Unreal unit = 1 cm; 1 Blender unit = 1 meter; Z-up handoff verified on import.
 - Texture/material budgets: 1K repeated props, 2K characters/building atlases, 4K only for shared terrain/theme atlases; bounded master materials with instances; ORM packing.
 - Triangle/LOD budgets: subscriber 18k/9k/3k; monster 25k/12k/4k; building module 15k with Nanite eligibility; prop 1k–12k; three LODs for repeated non-Nanite meshes.
@@ -65,9 +66,9 @@ Target project: `D:\CodexGames\RealmFoundry\RealmFoundry.uproject`
 ## Acceptance tests
 
 1. Packaged executable launches into `W_MainMenu`, starts a seeded campaign, loads `W_RealmFoundry`, and exits cleanly.
-2. Strategy camera pans, orbits, zooms, focuses, and selects with keyboard/mouse; gamepad equivalents retain UI focus.
-3. The vertical-slice objective can be completed from a clean campaign and produces the version 0.2 celebration.
-4. Valid placement deducts cost and creates one saved building; invalid/obstructed placement explains why and creates nothing.
+2. The game launches directly into a 35–55 degree elevated top-down view; no walking avatar is visible or controllable. Strategy camera pan, orbit, zoom, focus, cursor selection, and UI focus work.
+3. The vertical-slice objective is completed entirely through tycoon controls—build cards/hotkeys, cursor placement, pricing, and release controls—and produces the version 0.2 celebration.
+4. Valid cursor placement deducts cost and creates one saved building at the chosen snapped location; invalid/obstructed placement explains why and creates nothing.
 5. Undo/redo restores the last 20 construction mutations, including group duplication.
 6. District, lake, water elevation, waterfall, bridge, obstruction, entrance, and impassable-state interactions update traversal/placement validity.
 7. Network coverage, bandwidth, region capacity, congestion, and server strain change from buildings and subscriber load.
@@ -82,6 +83,7 @@ Target project: `D:\CodexGames\RealmFoundry\RealmFoundry.uproject`
 16. Finance, subscribers, active players, spending, advertising conversion, happiness, rating, competition, streamer/VIP, and awards views update from simulation data.
 17. At least 10,000 logical subscribers simulate while no more than the representative-agent cap is rendered; performance target is measured in the stress map.
 18. Blueprint/map/asset validation, focused automation, two clean PIE runs, standalone play, cook, package, and packaged smoke tests pass with no new fatal/error sequence.
+19. A 1920×1080 gameplay capture at default camera distance reads as a composed top-down fantasy tycoon settlement: terrain fills the frame, all five objective constructions have distinct silhouettes, roads/water/foliage establish districts, UI does not obscure the build area, and no legacy white test platform or asset-showroom row is visible.
 
 ## Explicit non-goals
 
@@ -89,4 +91,3 @@ Target project: `D:\CodexGames\RealmFoundry\RealmFoundry.uproject`
 - Unreleased roadmap features: factions and unrestricted world PvP, world raid bosses, disasters, Twitch integration, Steam Workshop integration, the future full in-game Codex, and claims of version 1.0.
 - The documented pre-spawn charging exploit is not implemented as a dependable feature.
 - Licensed or copied art, names, logos, music, or code from the referenced commercial game.
-

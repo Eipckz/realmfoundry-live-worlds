@@ -11,6 +11,7 @@ Saved/
 
 # Packaged output and local caches
 Packaged/
+Releases/
 BuildOutput/
 Evidence/Temp/
 Build/Windows/FileOpenOrder/

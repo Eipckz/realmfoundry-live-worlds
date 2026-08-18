@@ -1,48 +1,53 @@
 # Test Ledger
 
-Final autonomous verification date: August 18, 2026. Engine: Unreal Engine 5.8.1. DCC: Blender 5.2 LTS.
+Final corrected verification date: August 18, 2026. Engine: Unreal Engine 5.8.1. DCC: Blender 5.2.
 
-## Blender asset gates
-
-| Gate | Evidence | Result |
-|---|---|---|
-| Mesh topology/normals | `RF_Inn` report `e37185c8-3190-4010-a247-e3408623fe1e`; boss report `edabcd1a-b1b5-4b9b-9956-d930284b687a` | pass |
-| Character/rig | report `e1b17192-cc69-43f5-aff1-5901efb05113`; 18 bones, one root, weighted subscriber | pass |
-| Materials | report `af05e47a-2568-40f2-8be4-6bb680de0357` | pass |
-| Animation isolation | report `7aea2b56-00dd-425c-b172-01ae06f34da4`; 15 in-place clips | pass |
-| Static GLB export | report `4118b18a-ee05-4302-ae1c-4fc560648499` | pass |
-| Static FBX export | report `a4ea187f-ee2b-45dc-8bc6-ccd16b66b5d2` | pass |
-| Rigged FBX export | report `b264f4fa-2231-423d-bf78-0d223d0a2347` | pass |
-
-## Unreal editor gates
+## Art and import gates
 
 | Gate | Evidence | Result |
 |---|---|---|
-| Blueprint compile | All project-authored Blueprints compiled with warnings treated as errors | pass |
-| Automation smoke | 9/9 CoreUObject/PCG/container/structured-log/color/tuple/typed-element tests | pass |
-| Map PIE | `Project.Maps.PIE` 1/1; only host audio raw-mode warning | pass |
-| Full gameplay acceptance | Traversed all six construction zones in one PIE session | pass |
-| Acceptance state | `ProgressStep=6`, `Subscribers=25`, `ActivePlayers=13`, `Version=0.2`, `ObjectiveComplete=true`, `Cash=264250`, `Rating=4.5`, `Hype=80`, `NetworkCoverage=100`, `ServerCapacity=250` | pass |
-| Persistence | Editor autosave `RealmFoundry_Autosave.sav`, successful five-second save cycle | pass |
-| Live simulation sample | World revision 40; subscriber day 80; dungeon instances 2; economy revenue 2625; research 95; minor bugs 0 | pass |
+| Original top-down world | `ExternalAssets/DioramaV2/RF_DioramaV2.blend`; 523 objects, 22 materials | pass |
+| Blender render | `RF_DioramaV2_Preview.png`, 1920x1080 | pass |
+| Unreal import | combined town plus six modular building FBXs imported under `/Game/Environment/DioramaV2` | pass |
+| Import commandlet | completed with 0 errors; one standard MCP EULA warning | pass |
+| Legacy showroom removal | 49 slab/showroom actors and six objective-trigger actors removed from the release world | pass |
+
+## Editor and gameplay gates
+
+| Gate | Evidence | Result |
+|---|---|---|
+| Blueprint compile | GameMode, strategy pawn/controller, six buildables, HUD, and simulation manager compiled with warnings treated as errors | pass |
+| Strategy presentation | elevated top-down camera, cursor input, WASD pan, no third-person operator pawn | pass |
+| One-building transaction | Inn spawned at cursor; cash `28000 -> 25500`, subscribers `250 -> 650`, hype `8 -> 15`, progress `0 -> 1` | pass |
+| Full construction loop | all six service categories placed in one PIE session | pass |
+| Major update | `ReleaseComplete=true`, `CurrentDay=31`, `Cash=28000`, `Subscribers=6650`, `Hype=75`, `BuildCount=6`, `ProgressStep=6` | pass |
+| Runtime confirmation | Development package visibly reported `BUILT: GRAND INN // HOME + RESPAWN SERVICES` after keyboard selection and cursor placement | pass |
 
 ## Package gates
 
 | Gate | Evidence | Result |
 |---|---|---|
-| Windows cook/stage/archive | 631 packages; PAK + IoStore; `BuildCookRun` ExitCode 0 | pass |
-| Archived executable | Process remained stable through 15-second smoke window | pass |
-| Runtime world | Mounted containers, loaded `/Game/Maps/W_RealmFoundry`, brought world up for play, printed operator objective | pass |
-| Runtime persistence | Packaged `RealmFoundry_Autosave.sav` created (1,980 bytes) | pass |
-| Runtime log audit | 0 fatal errors, ensures, Blueprint errors, script errors, or `/Game` load failures | pass |
+| Windows Shipping cook/archive | 555 packages, PAK + IoStore, 0 errors, 1 standard EULA warning | pass |
+| Shipping executable smoke | launched into the corrected top-down HUD and authored world | pass |
+| Windows Development cook/archive | `BuildCookRun` ExitCode 0 | pass |
+| Development executable smoke | keyboard/mouse construction input and spawned building verified | pass |
+| Public ZIP structure | archive listing includes root `RealmFoundry.exe` plus PAK/UTOC/UCAS payload | pass |
 
-## Package fingerprints
+## Published Windows artifact
+
+```text
+RealmFoundry-Tycoon-v0.3.0-Windows.zip
+Size: 525,888,846 bytes
+SHA256: 2EBEA02D92673BADB8CCBF8A9F69D1BEFB9A2D585F1DAAFCF7DFF86CCD005AAE
+```
+
+Development package contents: 55 files, 1,022,279,252 bytes.
 
 ```text
 5A48C76C8B6DAA31309A915EEC6A47BFE434CAEA9B9DEC859F07066D43722630  RealmFoundry.exe
-0C750B1A013B2FC988F8AA932D97CAFD62C5109DB15CC2A595F3CE66C2DA61A7  RealmFoundry-Windows.pak
-D9725CDBCBD71E7CBB65AD304B1CD6CEE545382E9270E036D4CD4D0752EC0E72  RealmFoundry-Windows.utoc
-2654CF00B7D7383CA794DCF655CC7A34BA7B0AD629E306BE89FA701347BA1C95  RealmFoundry-Windows.ucas
+A40EA770025BAB301C17CA1803F23AD21AA9353550BC2AD717B1DD46B8EADD6E  RealmFoundry-Windows.pak
+72E20D3B2C04B0A6E11F9F6B914012890C4183D72A7A4450BADB4ECD98D77871  RealmFoundry-Windows.utoc
+7CB01D9CF80533E956A396BD9B9FA007EC034C318DF5D8D93DC141BF659FD9F9  RealmFoundry-Windows.ucas
 ```
 
-The archived Windows folder contains 52 files and 998,958,827 bytes. `Packaged/`, `Saved/`, `Intermediate/`, and derived caches are excluded from source control.
+`Packaged/`, `Releases/`, `Saved/`, `Intermediate/`, and derived caches are excluded from source control. The ZIP is distributed through the GitHub release.

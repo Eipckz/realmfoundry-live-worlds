@@ -42,6 +42,8 @@ Useful scripts:
 - `ExternalAssets/Scripts/export_realmfoundry_buildings_v2.py` exports the six modular gameplay buildings.
 - `Design/Programmatic/compile_tycoon_blueprints.py` compiles all corrected gameplay Blueprints with warnings treated as errors.
 
+The packaging script resolves the project from its own location. Set `UE_ROOT` before running it when Unreal Engine 5.8 is installed somewhere other than the default `D:\UE_5.8` used by this workstation.
+
 ## Release status
 
 `v0.4.0` passed warnings-as-errors Blueprint validation, PIE construction/save tests, a 568-package Shipping cook with zero errors, 1920×1080 packaged launch and presentation checks, packaged construction input, packaged save creation, normal process exit, archive structure inspection, and SHA-256 hashing. See `TEST_LEDGER.md` for exact evidence and `FEATURE_MATRIX.md` for the honest implementation-depth inventory.

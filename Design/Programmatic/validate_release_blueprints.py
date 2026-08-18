@@ -13,6 +13,8 @@ def run():
         "/Game/Characters/Subscribers/BP_RFSubscriberAIController.BP_RFSubscriberAIController",
         "/Game/Characters/Subscribers/BP_RFSubscriberRepresentative.BP_RFSubscriberRepresentative",
         "/Game/Characters/Subscribers/BP_RFSubscriberSpawner.BP_RFSubscriberSpawner",
+        "/Game/Characters/Staff/BP_RFDeveloperStaff.BP_RFDeveloperStaff",
+        "/Game/Characters/Staff/BP_RFGameMasterStaff.BP_RFGameMasterStaff",
         "/Game/Data/Technology/BP_RFTechnologyDefinition.BP_RFTechnologyDefinition",
     ]
     compiled = []
@@ -40,6 +42,8 @@ def run():
         raise RuntimeError("Subscriber representative must have exactly one SpringArmComponent")
     if component_counts.get("/Script/Engine.CameraComponent", 0) != 1:
         raise RuntimeError("Subscriber representative must have exactly one CameraComponent")
+    if component_counts.get("/Script/Engine.TextRenderComponent", 0) != 1:
+        raise RuntimeError("Subscriber representative must have exactly one activity label")
 
     tool("editor_toolset.toolsets.asset.AssetTools.save_assets", {"asset_paths": []})
     return {

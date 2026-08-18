@@ -182,6 +182,7 @@ def build_subscriber_assets():
         ("CharacterName", "string", None),
         ("ClassName", "string", None),
         ("CurrentActivity", "string", None),
+        ("StaffRole", "string", None),
         ("InventorySummary", "string", None),
         ("UnsubscribeReason", "string", None),
         ("Level", "int", None),
@@ -199,20 +200,31 @@ def build_subscriber_assets():
         ("HomeLocation", "Vector", None),
         ("OrbitRadius", "float", None),
         ("PhaseOffset", "float", None),
+        ("ActivityTimer", "float", None),
         ("LoggedIn", "bool", None),
         ("IsSelected", "bool", None),
         ("IsInCombat", "bool", None),
         ("IsCheating", "bool", None),
         ("HasQuest", "bool", None),
+        ("IsStaff", "bool", None),
     ]
     for name, type_name, container in subscriber_vars:
         add_variable(rep_bp, name, type_name, container)
+    for editable_name in ["RealName", "PhaseOffset", "StaffRole", "IsStaff"]:
+        tool(
+            "editor_toolset.toolsets.blueprint.BlueprintTools.set_variable_instance_editable",
+            {
+                "blueprint": rep_bp,
+                "variable_name": editable_name,
+                "instance_editable": True,
+            })
     compile_blueprint(rep_bp)
     set_defaults(rep_bp, {
         "realName": "Morgan Rivers",
         "characterName": "Starwarden",
         "className": "Vanguard",
         "currentActivity": "Logging in",
+        "staffRole": "Subscriber",
         "inventorySummary": "Iron Sword, Health Potion, Ancient Key",
         "level": 12,
         "experience": 680,
@@ -226,9 +238,54 @@ def build_subscriber_assets():
         "mana": 80.0,
         "orbitRadius": 260.0,
         "phaseOffset": 0.0,
+        "activityTimer": 0.0,
         "loggedIn": True,
         "hasQuest": True,
+        "isStaff": False,
     })
+
+    rep_cdo = tool(
+        "editor_toolset.toolsets.blueprint.BlueprintTools.get_default_object",
+        {"blueprint": rep_bp})["returnValue"]
+    rep_components = tool(
+        "editor_toolset.toolsets.actor.ActorTools.get_components",
+        {"actor": rep_cdo})["returnValue"]
+    activity_label = None
+    for component in rep_components:
+        component_class = tool(
+            "editor_toolset.toolsets.object.ObjectTools.get_class",
+            {"instance": component})["returnValue"]["refPath"]
+        if component_class == "/Script/Engine.TextRenderComponent":
+            activity_label = component
+            break
+    if activity_label is None:
+        activity_label = tool(
+            "editor_toolset.toolsets.actor.ActorTools.add_component",
+            {
+                "owner": rep_bp,
+                "component_type": {"refPath": "/Script/Engine.TextRenderComponent"},
+                "name": "ActivityLabel",
+            })["returnValue"]
+    tool(
+        "editor_toolset.toolsets.object.ObjectTools.set_properties",
+        {
+            "instance": activity_label,
+            "values": json.dumps({
+                "text": "Thinking...",
+                "horizontalAlignment": "EHTA_Center",
+                "verticalAlignment": "EVRTA_TextCenter",
+                "textRenderColor": {"r": 0.15, "g": 0.95, "b": 1.0, "a": 1.0},
+                "worldSize": 28.0,
+                "relativeLocation": {"x": 0.0, "y": 0.0, "z": 145.0},
+                "relativeRotation": {"pitch": 0.0, "yaw": 180.0, "roll": 0.0},
+                "castShadow": False,
+                "bGenerateOverlapEvents": False,
+                "bCanEverAffectNavigation": False,
+                "bVisible": True,
+                "bHiddenInGame": False,
+            }),
+        })
+    compile_blueprint(rep_bp)
 
     event_graph = get_graph(rep_bp, "EventGraph")
     code = r'''
@@ -243,7 +300,7 @@ def build_subscriber_assets():
     :bLooping true))
 
 (event EventTick (DeltaSeconds)
-  (bind t (+ (* (Utilities|Time|GetGameTimeinSeconds) 24.0) (Variables|Default|GetPhaseOffset)))
+  (bind t (+ (* (Utilities|Time|GetGameTimeinSeconds) 7.5) (Variables|Default|GetPhaseOffset)))
   (bind home (Variables|Default|GetHomeLocation))
   (bind radius (Variables|Default|GetOrbitRadius))
   (bind x (+ (.x home) (* (Math|Trig|Cos(Degrees) t) radius)))
@@ -252,12 +309,39 @@ def build_subscriber_assets():
   (Transformation|SetActorLocation :self self :NewLocation destination :bSweep false :bTeleport true)
   (bind facing (Math|Vector|MakeVector (- (Math|Trig|Sin(Degrees) t)) (Math|Trig|Cos(Degrees) t) 0.0))
   (Transformation|SetActorRotation :self self :NewRotation (Math|Rotator|MakeRotfromX facing) :bTeleportPhysics true)
-  (if (> (Math|Trig|Sin(Degrees) (* t 0.35)) 0.65)
-    (Variables|Default|SetCurrentActivity "Questing")
-    (elif (< (Math|Trig|Sin(Degrees) (* t 0.35)) -0.65)
-      (Variables|Default|SetCurrentActivity "Shopping")
+  (bind activityWave (Math|Trig|Sin(Degrees) (* t 0.35)))
+  (if (Variables|Default|GetIsStaff)
+    (if (> activityWave 0.25)
+      (Variables|Default|SetCurrentActivity (Utilities|String|Append (Variables|Default|GetStaffRole) " resolving tickets"))
       (else
-        (Variables|Default|SetCurrentActivity "Socializing")))))
+        (Variables|Default|SetCurrentActivity (Utilities|String|Append (Variables|Default|GetStaffRole) " at workstation"))))
+    (else
+      (if (> activityWave 0.75)
+        (Variables|Default|SetCurrentActivity "Dungeon run")
+        (elif (> activityWave 0.35)
+          (Variables|Default|SetCurrentActivity "Fighting monsters")
+          (elif (> activityWave -0.10)
+            (Variables|Default|SetCurrentActivity "Questing")
+            (elif (> activityWave -0.60)
+              (Variables|Default|SetCurrentActivity "Shopping")
+              (else
+                (Variables|Default|SetCurrentActivity "Socializing"))))))))
+  (Variables|Default|SetActivityTimer (+ (Variables|Default|GetActivityTimer) DeltaSeconds))
+  (if (>= (Variables|Default|GetActivityTimer) 5.0)
+    (Variables|Default|SetActivityTimer 0.0)
+    (Variables|Default|SetExperience (+ (Variables|Default|GetExperience) 25))
+    (Variables|Default|SetGold (+ (Variables|Default|GetGold) 5))
+    (Variables|Default|SetLifetimeSpending (+ (Variables|Default|GetLifetimeSpending) 0.25))
+    (if (>= (Variables|Default|GetExperience) 1000)
+      (Variables|Default|SetLevel (+ (Variables|Default|GetLevel) 1))
+      (Variables|Default|SetExperience 0)))
+  (bind activityComponent (Actor|GetComponentByClass :self self :ComponentClass "/Script/Engine.TextRenderComponent"))
+  (bind activityText (Utilities|Casting|CastToTextRenderComponent :Object activityComponent)
+    (:then
+      (Rendering|Components|TextRender|SetText
+        :self activityText
+        :Value (Utilities|Text|ToText(String) (Variables|Default|GetCurrentActivity))))
+    (:CastFailed)))
 '''
     write_graph(event_graph, code)
     compile_blueprint(rep_bp)
@@ -290,12 +374,36 @@ def build_subscriber_assets():
     (bind x (* (Math|Trig|Cos(Degrees) angle) ring))
     (bind y (* (Math|Trig|Sin(Degrees) angle) ring))
     (bind spawnLocation (Math|Vector|MakeVector x y 65.0))
-    (Game|SpawnActorfromClass
+    (bind spawned (Game|SpawnActorfromClass
       :Class "/Game/Characters/Subscribers/BP_RFSubscriberRepresentative.BP_RFSubscriberRepresentative_C"
       :SpawnTransform (Math|Transform|MakeTransform :Location spawnLocation)
       :CollisionHandlingOverride "AlwaysSpawn"
-      :TransformScaleMethod "MultiplyWithRoot")
-    (Variables|Default|SetSpawnedRepresentatives (+ (Variables|Default|GetSpawnedRepresentatives) 1)))
+      :TransformScaleMethod "MultiplyWithRoot"))
+    (Variables|Default|SetSpawnedRepresentatives (+ (Variables|Default|GetSpawnedRepresentatives) 1))
+    (bind subscriber (Utilities|Casting|CastToBP_RFSubscriberRepresentative :Object spawned)
+      (:then
+        (Class|BPRFSubscriberRepresentative|SetRealName :self subscriber :RealName (Utilities|String|Append "Subscriber_" (Utilities|String|ToString(Integer) i)))
+        (Class|BPRFSubscriberRepresentative|SetCharacterName :self subscriber :CharacterName (Utilities|String|Append "Adventurer_" (Utilities|String|ToString(Integer) i)))
+        (Class|BPRFSubscriberRepresentative|SetLevel :self subscriber :Level (+ 1 (Math|Integer|%(Integer) i 40)))
+        (Class|BPRFSubscriberRepresentative|SetExperience :self subscriber :Experience (* (Math|Integer|%(Integer) i 10) 90))
+        (Class|BPRFSubscriberRepresentative|SetGold :self subscriber :Gold (+ 50 (* i 17)))
+        (Class|BPRFSubscriberRepresentative|SetWallet :self subscriber :Wallet (+ 5.0 (* i 0.75)))
+        (Class|BPRFSubscriberRepresentative|SetBankBalance :self subscriber :BankBalance (+ 20.0 (* i 2.5)))
+        (Class|BPRFSubscriberRepresentative|SetHappiness :self subscriber :Happiness (+ 55.0 (Math|Integer|%(Integer) i 35)))
+        (Class|BPRFSubscriberRepresentative|SetAddiction :self subscriber :Addiction (+ 20.0 (Math|Integer|%(Integer) i 60)))
+        (Class|BPRFSubscriberRepresentative|SetPartyId :self subscriber :PartyId (Math|Integer|%(Integer) i 9))
+        (Class|BPRFSubscriberRepresentative|SetFriendCount :self subscriber :FriendCount (Math|Integer|%(Integer) i 12))
+        (Class|BPRFSubscriberRepresentative|SetIsCheating :self subscriber :IsCheating (== (Math|Integer|%(Integer) i 17) 0))
+        (if (== (Math|Integer|%(Integer) i 4) 0)
+          (Class|BPRFSubscriberRepresentative|SetClassName :self subscriber :ClassName "Vanguard")
+          (elif (== (Math|Integer|%(Integer) i 4) 1)
+            (Class|BPRFSubscriberRepresentative|SetClassName :self subscriber :ClassName "Arcanist")
+            (elif (== (Math|Integer|%(Integer) i 4) 2)
+              (Class|BPRFSubscriberRepresentative|SetClassName :self subscriber :ClassName "Warden")
+              (else
+                (Class|BPRFSubscriberRepresentative|SetClassName :self subscriber :ClassName "Bard")))))
+        )
+      (:CastFailed)))
   (Development|PrintString "LIVING WORLD ONLINE // 10,000 LOGICAL SUBSCRIBERS // 36 VISIBLE REPRESENTATIVES" true true "(R=0.120000,G=0.850000,B=1.000000,A=1.000000)" 8.0))
 '''
     write_graph(spawner_graph, spawner_code)

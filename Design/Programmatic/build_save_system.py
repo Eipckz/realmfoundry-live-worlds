@@ -8,14 +8,17 @@ def tool(name, args):
 BT = "editor_toolset.toolsets.blueprint.BlueprintTools"
 
 
-def add_variable(blueprint, name, type_name):
+def add_variable(blueprint, name, type_name, container_type=None):
     variables = tool(f"{BT}.list_variables", {"blueprint": blueprint})["returnValue"]
     if name not in variables:
-        tool(f"{BT}.add_variable", {
+        args = {
             "blueprint": blueprint,
             "name": name,
             "type_name": type_name,
-        })
+        }
+        if container_type:
+            args["container_type"] = container_type
+        tool(f"{BT}.add_variable", args)
 
 
 def ensure_function(blueprint, name):
@@ -32,19 +35,34 @@ def ensure_function(blueprint, name):
 def run():
     save_bp = {"refPath": "/Game/Core/Save/BP_RFSaveGame.BP_RFSaveGame"}
     strategy = {"refPath": "/Game/Core/Camera/BP_RFStrategyCameraPawn.BP_RFStrategyCameraPawn"}
-    for name, type_name in [
-        ("TechTier", "int"),
-        ("BuildCount", "int"),
-        ("Hype", "float"),
-        ("SelectedBuildType", "int"),
-        ("RequiredBuildTier", "int"),
-        ("Researching", "bool"),
-        ("ResearchProgress", "float"),
-        ("ResearchDuration", "float"),
-        ("ActiveResearch", "string"),
-        ("PriceSubscription", "float"),
+    for name, type_name, container_type in [
+        ("TechTier", "int", None),
+        ("BuildCount", "int", None),
+        ("Hype", "float", None),
+        ("SelectedBuildType", "int", None),
+        ("RequiredBuildTier", "int", None),
+        ("Researching", "bool", None),
+        ("ResearchProgress", "float", None),
+        ("ResearchDuration", "float", None),
+        ("ActiveResearch", "string", None),
+        ("PriceSubscription", "float", None),
+        ("CampaignStage", "int", None),
+        ("CampaignWon", "bool", None),
+        ("CampaignFailed", "bool", None),
+        ("CampaignStatus", "string", None),
+        ("ServerCapacity", "int", None),
+        ("NetworkCoverage", "float", None),
+        ("Bandwidth", "int", None),
+        ("QuestCompletions", "int", None),
+        ("CombatEncounters", "int", None),
+        ("DungeonRuns", "int", None),
+        ("ReleasesPublished", "int", None),
+        ("VersionMajor", "int", None),
+        ("ConstructionRotation", "float", None),
+        ("PlacedBuildTypes", "int", "ARRAY"),
+        ("PlacedBuildTransforms", "Transform", "ARRAY"),
     ]:
-        add_variable(save_bp, name, type_name)
+        add_variable(save_bp, name, type_name, container_type)
     tool(f"{BT}.compile_blueprint", {"blueprint": save_bp, "warnings_as_errors": True})
 
     save_graph = ensure_function(strategy, "SaveRealm")
@@ -66,6 +84,21 @@ def run():
       (Class|BPRFSaveGame|SetResearchDuration :self realmSave :ResearchDuration (Variables|Default|GetResearchDuration))
       (Class|BPRFSaveGame|SetActiveResearch :self realmSave :ActiveResearch (Variables|Default|GetActiveResearch))
       (Class|BPRFSaveGame|SetPriceSubscription :self realmSave :PriceSubscription (Variables|Default|GetPriceSubscription))
+      (Class|BPRFSaveGame|SetCampaignStage :self realmSave :CampaignStage (Variables|Default|GetCampaignStage))
+      (Class|BPRFSaveGame|SetCampaignWon :self realmSave :CampaignWon (Variables|Default|GetCampaignWon))
+      (Class|BPRFSaveGame|SetCampaignFailed :self realmSave :CampaignFailed (Variables|Default|GetCampaignFailed))
+      (Class|BPRFSaveGame|SetCampaignStatus :self realmSave :CampaignStatus (Variables|Default|GetCampaignStatus))
+      (Class|BPRFSaveGame|SetServerCapacity :self realmSave :ServerCapacity (Variables|Default|GetServerCapacity))
+      (Class|BPRFSaveGame|SetNetworkCoverage :self realmSave :NetworkCoverage (Variables|Default|GetNetworkCoverage))
+      (Class|BPRFSaveGame|SetBandwidth :self realmSave :Bandwidth (Variables|Default|GetBandwidth))
+      (Class|BPRFSaveGame|SetQuestCompletions :self realmSave :QuestCompletions (Variables|Default|GetQuestCompletions))
+      (Class|BPRFSaveGame|SetCombatEncounters :self realmSave :CombatEncounters (Variables|Default|GetCombatEncounters))
+      (Class|BPRFSaveGame|SetDungeonRuns :self realmSave :DungeonRuns (Variables|Default|GetDungeonRuns))
+      (Class|BPRFSaveGame|SetReleasesPublished :self realmSave :ReleasesPublished (Variables|Default|GetReleasesPublished))
+      (Class|BPRFSaveGame|SetVersionMajor :self realmSave :VersionMajor (Variables|Default|GetVersionMajor))
+      (Class|BPRFSaveGame|SetConstructionRotation :self realmSave :ConstructionRotation (Variables|Default|GetConstructionRotation))
+      (Class|BPRFSaveGame|SetPlacedBuildTypes :self realmSave :PlacedBuildTypes (Variables|Default|GetPlacedBuildTypes))
+      (Class|BPRFSaveGame|SetPlacedBuildTransforms :self realmSave :PlacedBuildTransforms (Variables|Default|GetPlacedBuildTransforms))
       (if (SaveGame|SaveGametoSlot realmSave "RealmFoundry_Auto" 0)
         (Variables|Default|SetLastNotification "Realm saved to RealmFoundry_Auto")
         (Development|PrintString "REALM SAVED // F9 RESTORES THIS STATE" true true "(R=0.180000,G=1.000000,B=0.650000,A=1.000000)" 4.0)
@@ -97,6 +130,22 @@ def run():
         (Variables|Default|SetResearchDuration (Class|BPRFSaveGame|GetResearchDuration realmSave))
         (Variables|Default|SetActiveResearch (Class|BPRFSaveGame|GetActiveResearch realmSave))
         (Variables|Default|SetPriceSubscription (Class|BPRFSaveGame|GetPriceSubscription realmSave))
+        (Variables|Default|SetCampaignStage (Class|BPRFSaveGame|GetCampaignStage realmSave))
+        (Variables|Default|SetCampaignWon (Class|BPRFSaveGame|GetCampaignWon realmSave))
+        (Variables|Default|SetCampaignFailed (Class|BPRFSaveGame|GetCampaignFailed realmSave))
+        (Variables|Default|SetCampaignStatus (Class|BPRFSaveGame|GetCampaignStatus realmSave))
+        (Variables|Default|SetServerCapacity (Class|BPRFSaveGame|GetServerCapacity realmSave))
+        (Variables|Default|SetNetworkCoverage (Class|BPRFSaveGame|GetNetworkCoverage realmSave))
+        (Variables|Default|SetBandwidth (Class|BPRFSaveGame|GetBandwidth realmSave))
+        (Variables|Default|SetQuestCompletions (Class|BPRFSaveGame|GetQuestCompletions realmSave))
+        (Variables|Default|SetCombatEncounters (Class|BPRFSaveGame|GetCombatEncounters realmSave))
+        (Variables|Default|SetDungeonRuns (Class|BPRFSaveGame|GetDungeonRuns realmSave))
+        (Variables|Default|SetReleasesPublished (Class|BPRFSaveGame|GetReleasesPublished realmSave))
+        (Variables|Default|SetVersionMajor (Class|BPRFSaveGame|GetVersionMajor realmSave))
+        (Variables|Default|SetConstructionRotation (Class|BPRFSaveGame|GetConstructionRotation realmSave))
+        (Variables|Default|SetPlacedBuildTypes (Class|BPRFSaveGame|GetPlacedBuildTypes realmSave))
+        (Variables|Default|SetPlacedBuildTransforms (Class|BPRFSaveGame|GetPlacedBuildTransforms realmSave))
+        (CallFunction|RestorePlacedBuildings)
         (Variables|Default|SetLastNotification "Realm state restored from disk")
         (Development|PrintString "REALM RESTORED // STATE LOADED FROM DISK" true true "(R=0.150000,G=0.780000,B=1.000000,A=1.000000)" 4.0))
       (:CastFailed

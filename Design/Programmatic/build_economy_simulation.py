@@ -105,7 +105,7 @@ def run():
         (Variables|Default|SetChurnToday 0)
         (Variables|Default|SetSubscribers (+ (Variables|Default|GetSubscribers) (+ 10 (* (Variables|Default|GetBuildCount) 3))))
         (Variables|Default|SetHappiness (+ (Variables|Default|GetHappiness) 0.5))
-        (Variables|Default|SetLastNotification "Daily close complete: subscribers and treasury updated")))
+        (Variables|Default|SetLastNotification "Daily close complete")))
     (Variables|Default|SetRating (+ 3.0 (* (Variables|Default|GetHappiness) 0.015)))
     (Development|PrintString "DAILY CLOSE // REVENUE, EXPENSES, GROWTH, CAPACITY AND CHURN RESOLVED" true true "(R=0.180000,G=0.850000,B=1.000000,A=1.000000)" 4.0)))
 '''

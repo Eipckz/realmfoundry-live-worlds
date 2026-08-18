@@ -84,6 +84,7 @@ def configure_subscriber_camera():
     capsule = None
     boom = None
     camera = None
+    selection_hitbox = None
     extra_cameras = []
     extra_booms = []
     for component in components:
@@ -101,6 +102,8 @@ def configure_subscriber_camera():
                 camera = component
             else:
                 extra_cameras.append(component)
+        elif cls == "/Script/Engine.SphereComponent" and ":SelectionHitbox_GEN_VARIABLE" in path:
+            selection_hitbox = component
 
     # Recovery-safe cleanup for partial/retried authoring runs: retain exactly one named pair.
     for component in extra_cameras + extra_booms:
@@ -128,6 +131,40 @@ def configure_subscriber_camera():
         }),
     })
 
+    # A generous query-only volume makes fast-moving representatives reliably
+    # selectable from the strategy camera without changing their navigation body.
+    if selection_hitbox is None:
+        selection_hitbox = tool(f"{ACTOR_TOOLS}.add_component", {
+            "owner": representative,
+            "component_type": {"refPath": "/Script/Engine.SphereComponent"},
+            "name": "SelectionHitbox",
+        })["returnValue"]
+    if capsule:
+        tool(f"{ACTOR_TOOLS}.set_parent_component", {
+            "component": selection_hitbox,
+            "parent": capsule,
+        })
+    tool(f"{OBJECT_TOOLS}.list_properties", {"instance": selection_hitbox})
+    current_body = json.loads(tool(f"{OBJECT_TOOLS}.get_properties", {
+        "instance": selection_hitbox,
+        "properties": ["bodyInstance"],
+    })["returnValue"])["bodyInstance"]
+    current_body["collisionProfileName"] = "Custom"
+    current_body["collisionEnabled"] = "QueryOnly"
+    for response in current_body["collisionResponses"]["responseArray"]:
+        response["response"] = (
+            "ECR_Block" if response["channel"] == "Visibility" else "ECR_Ignore"
+        )
+    tool(f"{OBJECT_TOOLS}.set_properties", {
+        "instance": selection_hitbox,
+        "values": json.dumps({
+            "sphereRadius": 105.0,
+            "bodyInstance": current_body,
+            "bHiddenInGame": True,
+            "bVisible": True,
+        }),
+    })
+
     if camera is None:
         camera = tool(f"{ACTOR_TOOLS}.add_component", {
             "owner": representative,
@@ -144,7 +181,11 @@ def configure_subscriber_camera():
         }),
     })
     compile_blueprint(representative)
-    return {"boom": boom["refPath"], "camera": camera["refPath"]}
+    return {
+        "boom": boom["refPath"],
+        "camera": camera["refPath"],
+        "selection_hitbox": selection_hitbox["refPath"],
+    }
 
 
 def build_strategy_core():
@@ -222,6 +263,48 @@ def build_strategy_core():
       (Development|PrintString "RESEARCH COMPLETE // NEW CAPABILITIES UNLOCKED" true true "(R=0.160000,G=1.000000,B=0.620000,A=1.000000)" 6.0))))
 ''')
 
+    refresh_profile = ensure_function(strategy, "RefreshSelectedProfile")
+    write_graph(refresh_profile, r'''
+(fn RefreshSelectedProfile ()
+  (bind subscriber (Utilities|Casting|CastToBP_RFSubscriberRepresentative :Object (Variables|Default|GetSelectedSubscriber))
+    (:then
+      (bind identity (Utilities|String|Append
+        (Utilities|String|Append
+          (Utilities|String|Append (Class|BPRFSubscriberRepresentative|GetRealName subscriber) " / ")
+          (Utilities|String|Append (Class|BPRFSubscriberRepresentative|GetCharacterName subscriber) " / "))
+        (Utilities|String|Append
+          (Utilities|String|Append (Class|BPRFSubscriberRepresentative|GetClassName subscriber) " LVL ")
+          (Utilities|String|ToString(Integer) (Class|BPRFSubscriberRepresentative|GetLevel subscriber)))))
+      (Variables|Default|SetSelectedProfileSummary identity)
+      (bind activity (Utilities|String|Append
+        (Utilities|String|Append
+          (Utilities|String|Append (Class|BPRFSubscriberRepresentative|GetCurrentActivity subscriber) " | GOLD ")
+          (Utilities|String|ToString(Integer) (Class|BPRFSubscriberRepresentative|GetGold subscriber)))
+        (Utilities|String|Append
+          (Utilities|String|Append " | HAPPY " (Utilities|String|ToString(Float) (Class|BPRFSubscriberRepresentative|GetHappiness subscriber)))
+          (Utilities|String|Append " | " (Class|BPRFSubscriberRepresentative|GetInventorySummary subscriber)))))
+      (Variables|Default|SetSelectedActivitySummary activity))
+    (:CastFailed
+      (Variables|Default|SetSelectedProfileSummary "Selected actor is not a subscriber")
+      (Variables|Default|SetSelectedActivitySummary "No profile data available"))))
+''')
+
+    select_fallback = ensure_function(strategy, "SelectFallbackSubscriber")
+    write_graph(select_fallback, r'''
+(fn SelectFallbackSubscriber ()
+  (bind fallbackActor (Actor|GetActorOfClass "/Game/Characters/Subscribers/BP_RFSubscriberRepresentative.BP_RFSubscriberRepresentative_C"))
+  (bind fallbackCharacter (Utilities|Casting|CastToCharacter :Object fallbackActor)
+    (:then
+      (Variables|Default|SetSelectedSubscriber fallbackCharacter)
+      (Variables|Default|SetSelectedSubscriberName (Utilities|GetDisplayName fallbackCharacter))
+      (Variables|Default|SetActivePanel 3)
+      (CallFunction|RefreshSelectedProfile)
+      (Variables|Default|SetLastNotification "Nearest visible subscriber selected; press F to follow")
+      (Development|PrintString "SUBSCRIBER SELECTED // F FOLLOW // ESC RETURN" true true "(R=0.100000,G=0.850000,B=1.000000,A=1.000000)" 4.0))
+    (:CastFailed
+      (Variables|Default|SetLastNotification "No active subscriber representatives available"))))
+''')
+
     select_subscriber = ensure_function(strategy, "SelectSubscriberUnderCursor")
     write_graph(select_subscriber, r'''
 (fn SelectSubscriberUnderCursor ()
@@ -234,10 +317,13 @@ def build_strategy_core():
         (Variables|Default|SetSelectedSubscriber character)
         (Variables|Default|SetSelectedSubscriberName (Utilities|GetDisplayName character))
         (Variables|Default|SetActivePanel 3)
+        (CallFunction|RefreshSelectedProfile)
         (Variables|Default|SetLastNotification "Subscriber selected; press F to follow")
         (Development|PrintString "SUBSCRIBER SELECTED // F FOLLOW // ESC RETURN" true true "(R=0.100000,G=0.850000,B=1.000000,A=1.000000)" 4.0))
       (:CastFailed
-        (Variables|Default|SetLastNotification "No subscriber under cursor")))))
+        (CallFunction|SelectFallbackSubscriber)))
+    (else
+      (CallFunction|SelectFallbackSubscriber))))
 ''')
 
     follow = ensure_function(strategy, "FollowSelectedSubscriber")
@@ -270,6 +356,8 @@ def build_strategy_core():
   (bind (blocking initial hitTime distance location impactPoint normal impactNormal physMat hitActor hitComponent hitBone bone hitItem element face traceStart traceEnd) (Collision|BreakHitResult hit))
   (bind snapped (Math|Vector|VectorSnappedtoGrid impactPoint 250.0))
   (bind spawnLocation (+ snapped (Math|Vector|MakeVector 0.0 0.0 35.0)))
+  (bind buildRotation (Math|Rotator|MakeRotator :Roll 0.0 :Pitch 0.0 :Yaw (Variables|Default|GetConstructionRotation)))
+  (bind buildTransform (Math|Transform|MakeTransform :Location spawnLocation :Rotation buildRotation))
   (if (<= (Variables|Default|GetSelectedBuildType) 0)
     (Development|PrintString "INSPECTION MODE // CLICK A SUBSCRIBER OR SELECT BUILD 1-6" true true "(R=0.180000,G=0.820000,B=1.000000,A=1.000000)" 3.0)
     (elif (< (Variables|Default|GetTechTier) (Variables|Default|GetRequiredBuildTier))
@@ -281,27 +369,33 @@ def build_strategy_core():
         (else
           (if blocking
             (if (== (Variables|Default|GetSelectedBuildType) 1)
-              (Game|SpawnActorfromClass :Class "/Game/Core/BuildablesV2/BP_RFBuildable_InnV2.BP_RFBuildable_InnV2_C" :SpawnTransform (Math|Transform|MakeTransform :Location spawnLocation) :CollisionHandlingOverride "AlwaysSpawn" :TransformScaleMethod "MultiplyWithRoot")
+              (bind spawnedInn (Game|SpawnActorfromClass :Class "/Game/Core/BuildablesV2/BP_RFBuildable_InnV2.BP_RFBuildable_InnV2_C" :SpawnTransform buildTransform :CollisionHandlingOverride "AlwaysSpawn" :TransformScaleMethod "MultiplyWithRoot"))
+              (CallFunction|RegisterPlacedBuilding :BuildType 1 :BuildActor spawnedInn :BuildTransform buildTransform)
               (CallFunction|ApplyBuildEconomy)
               (Variables|Default|SetLastNotification "Grand Inn constructed")
               (elif (== (Variables|Default|GetSelectedBuildType) 2)
-                (Game|SpawnActorfromClass :Class "/Game/Core/BuildablesV2/BP_RFBuildable_SmithyV2.BP_RFBuildable_SmithyV2_C" :SpawnTransform (Math|Transform|MakeTransform :Location spawnLocation) :CollisionHandlingOverride "AlwaysSpawn" :TransformScaleMethod "MultiplyWithRoot")
+                (bind spawnedSmithy (Game|SpawnActorfromClass :Class "/Game/Core/BuildablesV2/BP_RFBuildable_SmithyV2.BP_RFBuildable_SmithyV2_C" :SpawnTransform buildTransform :CollisionHandlingOverride "AlwaysSpawn" :TransformScaleMethod "MultiplyWithRoot"))
+                (CallFunction|RegisterPlacedBuilding :BuildType 2 :BuildActor spawnedSmithy :BuildTransform buildTransform)
                 (CallFunction|ApplyBuildEconomy)
                 (Variables|Default|SetLastNotification "Blacksmith economy online")
                 (elif (== (Variables|Default|GetSelectedBuildType) 3)
-                  (Game|SpawnActorfromClass :Class "/Game/Core/BuildablesV2/BP_RFBuildable_UplinkV2.BP_RFBuildable_UplinkV2_C" :SpawnTransform (Math|Transform|MakeTransform :Location spawnLocation) :CollisionHandlingOverride "AlwaysSpawn" :TransformScaleMethod "MultiplyWithRoot")
+                  (bind spawnedUplink (Game|SpawnActorfromClass :Class "/Game/Core/BuildablesV2/BP_RFBuildable_UplinkV2.BP_RFBuildable_UplinkV2_C" :SpawnTransform buildTransform :CollisionHandlingOverride "AlwaysSpawn" :TransformScaleMethod "MultiplyWithRoot"))
+                  (CallFunction|RegisterPlacedBuilding :BuildType 3 :BuildActor spawnedUplink :BuildTransform buildTransform)
                   (CallFunction|ApplyBuildEconomy)
                   (Variables|Default|SetLastNotification "Arcane uplink capacity online")
                   (elif (== (Variables|Default|GetSelectedBuildType) 4)
-                    (Game|SpawnActorfromClass :Class "/Game/Core/BuildablesV2/BP_RFBuildable_GuildHallV2.BP_RFBuildable_GuildHallV2_C" :SpawnTransform (Math|Transform|MakeTransform :Location spawnLocation) :CollisionHandlingOverride "AlwaysSpawn" :TransformScaleMethod "MultiplyWithRoot")
+                    (bind spawnedGuild (Game|SpawnActorfromClass :Class "/Game/Core/BuildablesV2/BP_RFBuildable_GuildHallV2.BP_RFBuildable_GuildHallV2_C" :SpawnTransform buildTransform :CollisionHandlingOverride "AlwaysSpawn" :TransformScaleMethod "MultiplyWithRoot"))
+                    (CallFunction|RegisterPlacedBuilding :BuildType 4 :BuildActor spawnedGuild :BuildTransform buildTransform)
                     (CallFunction|ApplyBuildEconomy)
                     (Variables|Default|SetLastNotification "Guild hall social systems online")
                     (elif (== (Variables|Default|GetSelectedBuildType) 5)
-                      (Game|SpawnActorfromClass :Class "/Game/Core/BuildablesV2/BP_RFBuildable_DungeonGateV2.BP_RFBuildable_DungeonGateV2_C" :SpawnTransform (Math|Transform|MakeTransform :Location spawnLocation) :CollisionHandlingOverride "AlwaysSpawn" :TransformScaleMethod "MultiplyWithRoot")
+                      (bind spawnedDungeon (Game|SpawnActorfromClass :Class "/Game/Core/BuildablesV2/BP_RFBuildable_DungeonGateV2.BP_RFBuildable_DungeonGateV2_C" :SpawnTransform buildTransform :CollisionHandlingOverride "AlwaysSpawn" :TransformScaleMethod "MultiplyWithRoot"))
+                      (CallFunction|RegisterPlacedBuilding :BuildType 5 :BuildActor spawnedDungeon :BuildTransform buildTransform)
                       (CallFunction|ApplyBuildEconomy)
                       (Variables|Default|SetLastNotification "Dungeon gate and instancing online")
                       (elif (== (Variables|Default|GetSelectedBuildType) 6)
-                        (Game|SpawnActorfromClass :Class "/Game/Core/BuildablesV2/BP_RFBuildable_TravelDockV2.BP_RFBuildable_TravelDockV2_C" :SpawnTransform (Math|Transform|MakeTransform :Location spawnLocation) :CollisionHandlingOverride "AlwaysSpawn" :TransformScaleMethod "MultiplyWithRoot")
+                        (bind spawnedDock (Game|SpawnActorfromClass :Class "/Game/Core/BuildablesV2/BP_RFBuildable_TravelDockV2.BP_RFBuildable_TravelDockV2_C" :SpawnTransform buildTransform :CollisionHandlingOverride "AlwaysSpawn" :TransformScaleMethod "MultiplyWithRoot"))
+                        (CallFunction|RegisterPlacedBuilding :BuildType 6 :BuildActor spawnedDock :BuildTransform buildTransform)
                         (CallFunction|ApplyBuildEconomy)
                         (Variables|Default|SetLastNotification "Sky dock paid travel online")))))))))))))
 ''')
@@ -321,6 +415,7 @@ def build_strategy_core():
   (bind controller (Game|GetPlayerController 0))
   (CallFunction|ProcessResearch :DeltaSeconds DeltaSeconds)
   (CallFunction|ProcessEconomy :DeltaSeconds DeltaSeconds)
+  (CallFunction|ProcessFullOperations :DeltaSeconds DeltaSeconds)
   (if (not (Variables|Default|GetFollowMode))
     (if (Game|Player|IsInputKeyDown controller "W")
       (Pawn|Input|AddMovementInput self (Math|Vector|MakeVector 0.707 0.707)))
@@ -366,6 +461,20 @@ def build_strategy_core():
     (CallFunction|SaveRealm))
   (if (Game|Player|WasInputKeyJustPressed controller "F9")
     (CallFunction|LoadRealm))
+  (if (Game|Player|WasInputKeyJustPressed controller "Q")
+    (Variables|Default|SetConstructionRotation (- (Variables|Default|GetConstructionRotation) 45.0))
+    (Variables|Default|SetLastNotification "Construction rotated left 45 degrees"))
+  (if (Game|Player|WasInputKeyJustPressed controller "E")
+    (Variables|Default|SetConstructionRotation (+ (Variables|Default|GetConstructionRotation) 45.0))
+    (Variables|Default|SetLastNotification "Construction rotated right 45 degrees"))
+  (if (Game|Player|WasInputKeyJustPressed controller "Z")
+    (CallFunction|UndoLastBuilding))
+  (if (Game|Player|WasInputKeyJustPressed controller "U")
+    (CallFunction|UndoLastBuilding))
+  (if (Game|Player|WasInputKeyJustPressed controller "Y")
+    (CallFunction|RedoLastBuilding))
+  (if (Game|Player|WasInputKeyJustPressed controller "I")
+    (CallFunction|RedoLastBuilding))
   (if (Game|Player|WasInputKeyJustPressed controller "Hyphen")
     (if (> (Variables|Default|GetPriceSubscription) 1.0)
       (Variables|Default|SetPriceSubscription (- (Variables|Default|GetPriceSubscription) 0.5))

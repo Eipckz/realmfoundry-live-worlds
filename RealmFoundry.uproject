@@ -1,0 +1,23 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "{3BB36F4E-4231-C453-C02C-04A700C30978}",
+	"Category": "Games",
+	"Description": "RealmFoundry: Live Worlds — an original 3D MMORPG management simulation.",
+	"Plugins": [
+		{
+			"Name": "ModelingToolsEditorMode",
+			"Enabled": true,
+			"TargetAllowList": ["Editor"]
+		},
+		{
+			"Name": "ModelContextProtocol",
+			"Enabled": true,
+			"TargetAllowList": ["Editor"]
+		},
+		{
+			"Name": "AllToolsets",
+			"Enabled": true,
+			"TargetAllowList": ["Editor"]
+		}
+	]
+}
